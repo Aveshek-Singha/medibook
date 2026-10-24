@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: medibook_test
+          MYSQL_USER: medibook
+          MYSQL_PASSWORD: ci-app-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=$$MYSQL_ROOT_PASSWORD"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7.4
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    defaults:
+      run:
+        working-directory: api
+    env:
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: medibook
+      DB_PASSWORD: ci-app-password
+      DB_DATABASE: medibook_test
+      DB_SYNCHRONIZE: "false"
+      DB_SSL: "false"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 1
+      REDIS_TLS: "false"
+      JWT_ACCESS_SECRET: ci-access-key-with-at-least-32-characters
+      JWT_REFRESH_SECRET: ci-refresh-key-different-and-over-32-characters
+      THROTTLE_TTL: 60000
+      THROTTLE_LIMIT: 100000
+      LOGIN_THROTTLE_LIMIT: 100000
+      QUEUE_ENABLED: "true"
+      SMS_PROVIDER: console
+      LOG_LEVEL: silent
+      WEB_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: api/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit
+      - run: pnpm peers check
+      - run: pnpm run lint
+      - run: pnpm run build
+      - run: pnpm run test:unit
+      - run: pnpm run migration:run:test
+      - run: pnpm run test:e2e
+      - run: pnpm exec typeorm-ts-node-commonjs -d typeorm.config.ts schema:log
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      NEXT_PUBLIC_API_URL: https://api.example.com/api/v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm run build

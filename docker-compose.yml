@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: medibook-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: medibook
+      MYSQL_USER: medibook
+      MYSQL_PASSWORD: medibook
+    ports:
+      # Host 3306 sits inside a Windows reserved range (3237-3636) on this
+      # machine, so the container port 3306 is published on 13306 instead.
+      - "13306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7
+    container_name: medibook-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql_data:
+  redis_data:

@@ -1,0 +1,31 @@
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Dependencies and generated builds
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/coverage/
+**/out/
+**/*.tsbuildinfo
+
+# Local QA captures and generated artifacts
+.taste-skill/
+**/.taste-skill/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
